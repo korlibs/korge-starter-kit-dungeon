@@ -17,6 +17,8 @@ import korlibs.korge.view.property.*
 import korlibs.korge.view.tiles.*
 import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
+import korlibs.math.geom.bezier.Bezier.Companion.midX
+import korlibs.math.geom.bezier.Bezier.Companion.midY
 import korlibs.math.geom.ds.*
 import korlibs.math.interpolation.*
 import korlibs.memory.*
@@ -48,7 +50,11 @@ class BvhEntity(val world: BvhWorld, val view: View) {
         //if (lastRectangle != null) {
         //    world.bvh.remove(lastRectangle, this)
         //}
-        world.bvh.insertOrUpdate(view.getBounds(world.baseView), this)
+        //val pos = world.baseView.getPositionRelativeTo(world.baseView)
+        val rect = view.getBounds(world.baseView)
+        val pos = rect.getAnchoredPoint(Anchor.BOTTOM_CENTER)
+        //world.bvh.insertOrUpdate(rect, this)
+        world.bvh.insertOrUpdate(Rectangle(pos - Point(8, 16), Size(16, 16)), this)
         //view.getLocalBounds()
     }
 }
@@ -184,8 +190,14 @@ class MyScene : Scene() {
             for (result in entitiesBvh.bvh.intersect(ray)) {
                 if (result.obj.value?.view == player) continue
                 // NARROW result. And try for example to use circles, capsules or smaller rectangles covering only the base of the object
+                val rect = result.obj.d.toRectangle()
                 val intersectionPos = ray.point + ray.direction.normalized * result.intersect
-                outResults += RayResult(ray, intersectionPos, Vector2(1f, 0))
+                if (intersectionPos.distanceTo(pos) < 4f) {
+                    println("pos=$pos, dir=$dir, intersectionPos=$intersectionPos, ray.direction.normalized=${ray.direction.normalized}, result.intersect=${result.intersect}, result.obj.value?.view=${result.obj.value?.view} : result=$result")
+                }
+                val normalX = if (intersectionPos.x <= rect.left + 0.5f) -1f else if (intersectionPos.x >= rect.right - .5f) +1f else 0f
+                val normalY = if (intersectionPos.y <= rect.top + 0.5f) -1f else if (intersectionPos.y >= rect.bottom - .5f) +1f else 0f
+                outResults += RayResult(ray, intersectionPos, Vector2(normalX, normalY))
             }
             //println("results=$results")
             return outResults.filterNotNull().minByOrNull { it.point.distanceTo(pos) }
