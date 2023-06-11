@@ -1,4 +1,5 @@
 import korlibs.datastructure.*
+import korlibs.datastructure.ds.*
 import korlibs.datastructure.iterators.*
 import korlibs.event.*
 import korlibs.image.atlas.*
@@ -16,6 +17,7 @@ import korlibs.korge.view.property.*
 import korlibs.korge.view.tiles.*
 import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
+import korlibs.math.geom.ds.*
 import korlibs.math.interpolation.*
 import korlibs.memory.*
 import korlibs.time.*
@@ -24,6 +26,31 @@ suspend fun main() = Korge(windowSize = Size(512, 512), backgroundColor = Colors
     val sceneContainer = sceneContainer()
 
     sceneContainer.changeTo({ MyScene() })
+}
+
+class BvhWorld(val baseView: View) {
+    val bvh = BVH2D<BvhEntity>()
+    fun getAll(): List<BVH.Node<BvhEntity>> = bvh.search(bvh.envelope())
+    fun add(view: View): BvhEntity {
+        return BvhEntity(this, view).also { it.update() }
+    }
+
+    operator fun plusAssign(view: View) {
+        add(view)
+    }
+    //val entities = arrayListOf<BvhEntity>()
+}
+
+class BvhEntity(val world: BvhWorld, val view: View) {
+    //var lastRectangle: Rectangle? = null
+
+    fun update() {
+        //if (lastRectangle != null) {
+        //    world.bvh.remove(lastRectangle, this)
+        //}
+        world.bvh.insertOrUpdate(view.getBounds(world.baseView), this)
+        //view.getLocalBounds()
+    }
 }
 
 class MyScene : Scene() {
@@ -44,11 +71,24 @@ class MyScene : Scene() {
             levelView = LDTKLevelView(level).addTo(this)
             annotations = graphics {  }
         }
+
+        val entitiesBvh = BvhWorld(camera)
+        addUpdater {
+            for (entity in entitiesBvh.getAll()) {
+                entity.value?.update()
+            }
+        }
+
         val textInfo = text("")
         camera.setTo(Rectangle(0f, 0f, levelView.width, levelView.height))
         println(levelView.layerViewsByName.keys)
         val grid = levelView.layerViewsByName["Kind"]!!.intGrid
         val entities = levelView.layerViewsByName["Entities"]!!.entities
+
+        for (entity in entities) {
+            entitiesBvh += entity
+        }
+
         val player = entities.first {
             it.fieldsByName["Name"]?.valueString == "Cleric"
         }.apply {
@@ -138,11 +178,20 @@ class MyScene : Scene() {
         }
 
         fun doRay(pos: Point, dir: Vector2): RayResult? {
-            return grid.raycast(Ray(pos, dir), gridSize, collides = { check(it) })
+            val ray = Ray(pos, dir)
+            val outResults = arrayListOf<RayResult?>()
+            outResults += grid.raycast(ray, gridSize, collides = { check(it) })
+            for (result in entitiesBvh.bvh.intersect(ray)) {
+                if (result.obj.value?.view == player) continue
+                // NARROW result. And try for example to use circles, capsules or smaller rectangles covering only the base of the object
+                val intersectionPos = ray.point + ray.direction.normalized * result.intersect
+                outResults += RayResult(ray, intersectionPos, Vector2(1f, 0))
+            }
+            //println("results=$results")
+            return outResults.filterNotNull().minByOrNull { it.point.distanceTo(pos) }
         }
 
         fun updateRay(pos: Point): Float {
-
             val ANGLES_COUNT = 64
             val angles = (0 until ANGLES_COUNT).map { Angle.FULL * (it.toFloat() / ANGLES_COUNT.toFloat()) }
             //val angles = listOf(Angle.ZERO, Angle.HALF)
@@ -201,6 +250,13 @@ class MyScene : Scene() {
                     val newVec = (result.point - pos).reflected(result.normal).normalized
                     stroke(Colors.YELLOW) {
                         line(result.point, result.point + newVec * 4f)
+                    }
+                }
+
+                for (entity in entitiesBvh.getAll()) {
+                    //println("entity: ${entity.d.toRectangle()}")
+                    stroke(Colors.PURPLE) {
+                        rect(entity.d.toRectangle())
                     }
                 }
             }
