@@ -44,6 +44,7 @@ class MyScene : Scene() {
             levelView = LDTKLevelView(level).addTo(this)
             annotations = graphics {  }
         }
+        val textInfo = text("")
         camera.setTo(Rectangle(0f, 0f, levelView.width, levelView.height))
         println(levelView.layerViewsByName.keys)
         val grid = levelView.layerViewsByName["Kind"]!!.intGrid
@@ -156,7 +157,7 @@ class MyScene : Scene() {
                 val angle = anglesDeque.removeFirst()
                 val last = results.lastOrNull()
                 val current = doRay(pos, Vector2.polar(angle)) ?: continue
-                if (last != null && last.point.distanceTo(current.point) >= 16) {
+                if (last != null && (last.point.distanceTo(current.point) >= 16 || last.normal != current.normal)) {
                     val lastAngle = last.ray.direction.angle
                     val currentAngle = current.ray.direction.angle
                     if ((lastAngle - currentAngle).absoluteValue >= 0.25.degrees) {
@@ -170,7 +171,7 @@ class MyScene : Scene() {
                 results += current
             }
 
-
+            textInfo.text = "Rays: ${results.size}"
             annotations.updateShape {
                 fill(Colors.WHITE.withAd(0.25)) {
                     var first = true
@@ -240,7 +241,7 @@ class MyScene : Scene() {
                 player.zIndex = player.y
                 updateRay(oldPos)
             } else {
-                println("TODO!!. Checl why is this happening. Operation could have lead to stuck: oldPos=$oldPos -> newPos=$newPos, finalDir=$finalDir, moveRay=$moveRay")
+                println("TODO!!. Check why is this happening. Operation could have lead to stuck: oldPos=$oldPos -> newPos=$newPos, finalDir=$finalDir, moveRay=$moveRay")
             }
             //val lx = virtualController.lx
             //when {
