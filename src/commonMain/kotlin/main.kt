@@ -16,6 +16,7 @@ import korlibs.korge.view.animation.*
 import korlibs.korge.view.property.*
 import korlibs.korge.view.tiles.*
 import korlibs.korge.virtualcontroller.*
+import korlibs.math.*
 import korlibs.math.geom.*
 import korlibs.math.geom.bezier.Bezier.Companion.midX
 import korlibs.math.geom.bezier.Bezier.Companion.midY
@@ -180,10 +181,19 @@ class MyScene : Scene() {
         }
 
         fun hitTest(pos: Point): Boolean {
+            for (result in entitiesBvh.bvh.search(Rectangle.fromBounds(pos - Point(1, 1), pos + Point(1, 1)))) {
+                if (result.value?.view == player) continue
+                return true
+            }
             return grid.check((pos / gridSize).toInt())
         }
 
         fun doRay(pos: Point, dir: Vector2): RayResult? {
+            // @TODO: FIXME! This is required because BVH produces wrong intersect distance for completely vertical rays. We should fix that.
+            val dir = Vector2(
+                if (dir.x.isAlmostEquals(0f)) .00001f else dir.x,
+                if (dir.y.isAlmostEquals(0f)) .00001f else dir.y,
+            )
             val ray = Ray(pos, dir)
             val outResults = arrayListOf<RayResult?>()
             outResults += grid.raycast(ray, gridSize, collides = { check(it) })
@@ -192,9 +202,9 @@ class MyScene : Scene() {
                 // NARROW result. And try for example to use circles, capsules or smaller rectangles covering only the base of the object
                 val rect = result.obj.d.toRectangle()
                 val intersectionPos = ray.point + ray.direction.normalized * result.intersect
-                if (intersectionPos.distanceTo(pos) < 4f) {
-                    println("pos=$pos, dir=$dir, intersectionPos=$intersectionPos, ray.direction.normalized=${ray.direction.normalized}, result.intersect=${result.intersect}, result.obj.value?.view=${result.obj.value?.view} : result=$result")
-                }
+                //if (intersectionPos.distanceTo(pos) < 4f) {
+                //    println("pos=$pos, dir=$dir, intersectionPos=$intersectionPos, ray.direction.normalized=${ray.direction.normalized}, result.intersect=${result.intersect}, result.obj.value?.view=${result.obj.value?.view} : result=$result")
+                //}
                 val normalX = if (intersectionPos.x <= rect.left + 0.5f) -1f else if (intersectionPos.x >= rect.right - .5f) +1f else 0f
                 val normalY = if (intersectionPos.y <= rect.top + 0.5f) -1f else if (intersectionPos.y >= rect.bottom - .5f) +1f else 0f
                 outResults += RayResult(ray, intersectionPos, Vector2(normalX, normalY))
