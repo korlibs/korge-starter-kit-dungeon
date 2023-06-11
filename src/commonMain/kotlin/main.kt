@@ -16,7 +16,6 @@ import korlibs.korge.view.property.*
 import korlibs.korge.view.tiles.*
 import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
-import korlibs.math.raycasting.*
 import korlibs.memory.*
 import korlibs.time.*
 import kotlin.math.*
@@ -126,30 +125,48 @@ class MyScene : Scene() {
         }
         var lastDX = 0f
 
-        fun updateRay() {
+        fun IntIArray2.check(it: PointInt): Boolean {
+            if (!this.inside(it.x, it.y)) return true
+            val v = this.getAt(it.x, it.y)
+            return v != 1 && v != 3
+        }
 
-            fun IntIArray2.check(it: PointInt): Boolean {
-                if (!this.inside(it.x, it.y)) return true
-                val v = this.getAt(it.x, it.y)
-                return v != 1 && v != 3
-            }
+        fun doRay(pos: Point, dir: Vector2): RayResult? {
+            val size = Size(16, 16)
+            return grid.raycast(Ray(pos, dir), size, collides = { check(it) })
+        }
+
+        fun updateRay(pos: Point): Float {
+
 
             val ANGLES_COUNT = 64
             val angles = (0 until ANGLES_COUNT).map { Angle.FULL * (it.toFloat() / ANGLES_COUNT.toFloat()) }
+            //val angles = listOf(Angle.ZERO, Angle.HALF)
             val results = angles.map {
-                grid.raycast(Ray(player.pos, it), Size(16, 16), collides = { check(it) })
+                doRay(pos, Vector2.polar(it))
             }.filterNotNull()
 
             annotations.updateShape {
                 for (result in results) {
                     fill(Colors.RED) {
-                        circle(result, 2f)
+                        circle(result.point, 2f)
                     }
-                    stroke(Colors.BLUE.withAd(0.5)) {
-                        line(player.pos, result)
+                    stroke(Colors.BLUE.withAd(0.25)) {
+                        line(pos, result.point)
+                    }
+                }
+                for (result in results) {
+                    stroke(Colors.GREEN) {
+                        line(result.point, result.point + result.normal * 4f)
+                    }
+
+                    val newVec = (result.point - pos).reflected(result.normal).normalized
+                    stroke(Colors.YELLOW) {
+                        line(result.point, result.point + newVec * 4f)
                     }
                 }
             }
+            return results.map { it.point.distanceTo(pos) }.minOrNull() ?: 0f
             //println("result=$result")
         }
 
@@ -166,10 +183,22 @@ class MyScene : Scene() {
                 playerView.animation = "walk"
                 playerView.scaleX = if (lastDX < 0) -1f else +1f
             }
-            player.x += dx.toFloat()
-            player.y += dy.toFloat()
+            val newDir = Vector2(dx.toFloat(), dy.toFloat())
+            val result = doRay(player.pos, newDir)
+            val finalDir = if (result != null && result.point.distanceTo(player.pos) < 6f) {
+                val res = newDir.reflected(result.normal)
+                // @TODO: Improve sliding
+                if (result.normal.y != 0f) {
+                    Vector2(res.x, 0f)
+                } else {
+                    Vector2(0f, res.y)
+                }
+            } else {
+                newDir
+            }
+            player.pos = player.pos + finalDir
             player.zIndex = player.y
-            updateRay()
+            updateRay(player.pos)
             //val lx = virtualController.lx
             //when {
             //    lx < 0f -> {
@@ -504,3 +533,7 @@ open class ImageAnimationView2<T : SmoothedBmpSlice>(
         }
     }
 }
+
+inline operator fun Vector2.rem(that: Vector2): Vector2 = Point(x % that.x, y % that.y)
+inline operator fun Vector2.rem(that: Size): Vector2 = Point(x % that.width, y % that.height)
+inline operator fun Vector2.rem(that: Float): Vector2 = Point(x % that, y % that)
