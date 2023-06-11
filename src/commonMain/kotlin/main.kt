@@ -3,25 +3,22 @@ import korlibs.datastructure.iterators.*
 import korlibs.event.*
 import korlibs.image.atlas.*
 import korlibs.image.bitmap.*
-import korlibs.korge.*
-import korlibs.korge.scene.*
-import korlibs.korge.view.*
 import korlibs.image.color.*
 import korlibs.image.format.*
 import korlibs.image.tiles.*
-import korlibs.io.file.std.*
-import korlibs.korge.animate.*
+import korlibs.korge.*
 import korlibs.korge.input.*
-import korlibs.korge.internal.*
-import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
+import korlibs.korge.scene.*
+import korlibs.korge.view.*
 import korlibs.korge.view.animation.*
 import korlibs.korge.view.property.*
 import korlibs.korge.view.tiles.*
+import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
 import korlibs.memory.*
 import korlibs.time.*
-import kotlinx.serialization.json.*
+import kotlin.math.*
 
 suspend fun main() = Korge(windowSize = Size(512, 512), backgroundColor = Colors["#2b2b2b"]) {
     val sceneContainer = sceneContainer()
@@ -79,6 +76,80 @@ class MyScene : Scene() {
             it.play()
         })
 
+        val virtualController = virtualController(
+            sticks = listOf(
+                VirtualStickConfig(
+                    left = Key.LEFT,
+                    right = Key.RIGHT,
+                    up = Key.UP,
+                    down = Key.DOWN,
+                    lx = GameButton.LX,
+                    ly = GameButton.LY,
+                    anchor = Anchor.BOTTOM_LEFT,
+                )
+            ),
+            buttons = listOf(
+                VirtualButtonConfig(
+                    key = Key.SPACE,
+                    button = GameButton.BUTTON_SOUTH,
+                    anchor = Anchor.BOTTOM_RIGHT,
+                ),
+                VirtualButtonConfig(
+                    key = Key.RETURN,
+                    button = GameButton.BUTTON_NORTH,
+                    anchor = Anchor.BOTTOM_RIGHT,
+                    offset = Point(0f, -100f)
+                )
+            ),
+        )
+
+        var playerState = ""
+        virtualController.apply {
+            down(GameButton.BUTTON_SOUTH) {
+                val playerView = (player.view as ImageDataView2)
+                //playerView.animation = "attack"
+                playerState = "attack"
+            }
+            down(GameButton.BUTTON_NORTH) {
+                val playerView = (player.view as ImageDataView2)
+                //playerView.animation = "attack"
+                playerState = "gesture"
+            }
+            //changed(GameButton.LX) {
+            //    if (it.new.absoluteValue < 0.01f) {
+            //        updated(right = it.new > 0f, up = true, scale = 1f)
+            //    }
+        }
+        var lastDX = 0f
+        addUpdater(60.hz) {
+            val dx = virtualController.lx
+            val dy = virtualController.ly
+
+            val playerView = (player.view as ImageDataView2)
+            if (dx != 0f) lastDX = dx
+            if (dx == 0f && dy == 0f) {
+                playerView.animation = if (playerState != "") playerState else "idle"
+            } else {
+                playerState = ""
+                playerView.animation = "walk"
+                playerView.scaleX = if (lastDX < 0) -1f else +1f
+            }
+            player.x += dx.toFloat()
+            player.y += dy.toFloat()
+            player.zIndex = player.y
+            //val lx = virtualController.lx
+            //when {
+            //    lx < 0f -> {
+            //        updated(right = false, up = false, scale = lx.absoluteValue)
+            //    }
+            //    lx > 0f -> {
+            //        updated(right = true, up = false, scale = lx.absoluteValue)
+            //    }
+            //}
+        }
+    }
+
+    /*
         addArrowKeysController() { dx, dy, lastDX, lastDY ->
             val playerView = (player.view as ImageDataView2)
             if (dx == 0 && dy == 0) {
@@ -108,10 +179,17 @@ class MyScene : Scene() {
             mage.y += dy.toFloat()
             mage.zIndex = mage.y
         }
-    }
+
+     */
 }
 
-fun View.addArrowKeysController(left: Key = Key.LEFT, right: Key = Key.RIGHT, up: Key = Key.UP, down: Key = Key.DOWN, block: (dx: Int, dy: Int, lastDX: Int, lastDY: Int) -> Unit) {
+fun View.addArrowKeysController(
+    left: Key = Key.LEFT,
+    right: Key = Key.RIGHT,
+    up: Key = Key.UP,
+    down: Key = Key.DOWN,
+    block: (dx: Int, dy: Int, lastDX: Int, lastDY: Int) -> Unit
+) {
     keys {
         var lastDX = 0
         var lastDY = 0
@@ -129,7 +207,8 @@ inline fun Container.imageAnimationView2(
     animation: ImageAnimation? = null,
     direction: ImageAnimation.Direction? = null,
     block: @ViewDslMarker ImageAnimationView2<Image>.() -> Unit = {}
-): ImageAnimationView2<Image> = ImageAnimationView2(animation, direction) { Image(Bitmaps.transparent) }.addTo(this, block)
+): ImageAnimationView2<Image> =
+    ImageAnimationView2(animation, direction) { Image(Bitmaps.transparent) }.addTo(this, block)
 
 fun ImageAnimationView2(
     animation: ImageAnimation? = null,
@@ -188,12 +267,21 @@ open class ImageDataView2(
         this.smoothing = smoothing
     }
 
-    fun play() { animationView.play() }
-    fun stop() { animationView.stop() }
-    fun rewind() { animationView.rewind() }
+    fun play() {
+        animationView.play()
+    }
+
+    fun stop() {
+        animationView.stop()
+    }
+
+    fun rewind() {
+        animationView.rewind()
+    }
 
     private fun updatedDataAnimation() {
-        animationView.animation = if (animation != null) data?.animationsByName?.get(animation) else data?.defaultAnimation
+        animationView.animation =
+            if (animation != null) data?.animationsByName?.get(animation) else data?.defaultAnimation
     }
 }
 
@@ -207,7 +295,7 @@ fun <T : PixelAnchorable> T.anchorPixel(point: Point): T {
     return this
 }
 
-open class ImageAnimationView2<T: SmoothedBmpSlice>(
+open class ImageAnimationView2<T : SmoothedBmpSlice>(
     animation: ImageAnimation? = null,
     direction: ImageAnimation.Direction? = null,
     val createImage: () -> T
@@ -235,7 +323,8 @@ open class ImageAnimationView2<T: SmoothedBmpSlice>(
             }
         }
 
-    private val computedDirection: ImageAnimation.Direction get() = direction ?: animation?.direction ?: ImageAnimation.Direction.FORWARD
+    private val computedDirection: ImageAnimation.Direction
+        get() = direction ?: animation?.direction ?: ImageAnimation.Direction.FORWARD
     private val anchorContainer = container()
     private val layers = fastArrayListOf<View>()
     private val layersByName = FastStringMap<View>()
@@ -269,7 +358,8 @@ open class ImageAnimationView2<T: SmoothedBmpSlice>(
 
     private fun setFrame(frameIndex: Int) {
         currentFrameIndex = frameIndex
-        val frame = if (animation?.frames?.isNotEmpty() == true) animation?.frames?.getCyclicOrNull(frameIndex) else null
+        val frame =
+            if (animation?.frames?.isNotEmpty() == true) animation?.frames?.getCyclicOrNull(frameIndex) else null
         if (frame != null) {
             frame.layerData.fastForEach {
                 val image = layers[it.layer.index]
@@ -277,6 +367,7 @@ open class ImageAnimationView2<T: SmoothedBmpSlice>(
                     ImageLayer.Type.NORMAL -> {
                         (image as SmoothedBmpSlice).bitmap = it.slice
                     }
+
                     else -> {
                         image as TileMap
                         val tilemap = it.tilemap
@@ -337,6 +428,7 @@ open class ImageAnimationView2<T: SmoothedBmpSlice>(
                     ImageLayer.Type.NORMAL -> {
                         createImage().also { it.smoothing = smoothing } as View
                     }
+
                     ImageLayer.Type.TILEMAP -> createTilemap()
                     ImageLayer.Type.GROUP -> TODO()
                 }
@@ -349,9 +441,17 @@ open class ImageAnimationView2<T: SmoothedBmpSlice>(
     }
 
     private var running = true
-    override fun play() { running = true }
-    override fun stop() { running = false }
-    override fun rewind() { setFirstFrame() }
+    override fun play() {
+        running = true
+    }
+
+    override fun stop() {
+        running = false
+    }
+
+    override fun rewind() {
+        setFirstFrame()
+    }
 
     init {
         didSetAnimation()
