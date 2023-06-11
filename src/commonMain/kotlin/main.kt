@@ -75,7 +75,7 @@ class MyScene : Scene() {
         lateinit var levelView: LDTKLevelView
         lateinit var annotations: Graphics
         val camera = camera {
-            levelView = LDTKLevelView(level).addTo(this)
+            levelView = LDTKLevelView(level).addTo(this).xy(0, 8)
             annotations = graphics {  }
         }
 
@@ -243,7 +243,7 @@ class MyScene : Scene() {
             }
 
             entities.fastForEach {
-                it.alpha = .25f
+                it.alpha = if (it != player) .25f else 1f
             }
 
             for (result in results) {
@@ -285,7 +285,7 @@ class MyScene : Scene() {
 
                 for (entity in entitiesBvh.getAll()) {
                     //println("entity: ${entity.d.toRectangle()}")
-                    stroke(Colors.PURPLE) {
+                    stroke(Colors.PURPLE.withAd(0.1)) {
                         rect(entity.d.toRectangle())
                     }
                 }
