@@ -196,7 +196,7 @@ class MyScene : Scene() {
             )
             val ray = Ray(pos, dir)
             val outResults = arrayListOf<RayResult?>()
-            outResults += grid.raycast(ray, gridSize, collides = { check(it) })
+            outResults += grid.raycast(ray, gridSize, collides = { check(it) })?.also { it.view = null }
             for (result in entitiesBvh.bvh.intersect(ray)) {
                 if (result.obj.value?.view == player) continue
                 // NARROW result. And try for example to use circles, capsules or smaller rectangles covering only the base of the object
@@ -207,7 +207,7 @@ class MyScene : Scene() {
                 //}
                 val normalX = if (intersectionPos.x <= rect.left + 0.5f) -1f else if (intersectionPos.x >= rect.right - .5f) +1f else 0f
                 val normalY = if (intersectionPos.y <= rect.top + 0.5f) -1f else if (intersectionPos.y >= rect.bottom - .5f) +1f else 0f
-                outResults += RayResult(ray, intersectionPos, Vector2(normalX, normalY))
+                outResults += RayResult(ray, intersectionPos, Vector2(normalX, normalY))?.also { it.view = result.obj.value?.view }
             }
             //println("results=$results")
             return outResults.filterNotNull().minByOrNull { it.point.distanceTo(pos) }
@@ -240,6 +240,14 @@ class MyScene : Scene() {
                     }
                 }
                 results += current
+            }
+
+            entities.fastForEach {
+                it.alpha = .25f
+            }
+
+            for (result in results) {
+                result.view?.alpha = 1f
             }
 
             textInfo.text = "Rays: ${results.size}"
@@ -659,3 +667,5 @@ open class ImageAnimationView2<T : SmoothedBmpSlice>(
 inline operator fun Vector2.rem(that: Vector2): Vector2 = Point(x % that.x, y % that.y)
 inline operator fun Vector2.rem(that: Size): Vector2 = Point(x % that.width, y % that.height)
 inline operator fun Vector2.rem(that: Float): Vector2 = Point(x % that, y % that)
+
+private var RayResult.view: View? by Extra.Property { null }
