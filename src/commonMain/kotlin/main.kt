@@ -16,6 +16,7 @@ import korlibs.korge.view.property.*
 import korlibs.korge.view.tiles.*
 import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
+import korlibs.math.raycasting.*
 import korlibs.memory.*
 import korlibs.time.*
 import kotlin.math.*
@@ -39,11 +40,14 @@ class MyScene : Scene() {
         //println()
         //LDTKWorldView(ldtk, showCollisions = true).addTo(this)
         lateinit var levelView: LDTKLevelView
+        lateinit var annotations: Graphics
         val camera = camera {
             levelView = LDTKLevelView(level).addTo(this)
+            annotations = graphics {  }
         }
         camera.setTo(Rectangle(0f, 0f, levelView.width, levelView.height))
         println(levelView.layerViewsByName.keys)
+        val grid = levelView.layerViewsByName["Kind"]!!.intGrid
         val entities = levelView.layerViewsByName["Entities"]!!.entities
         val player = entities.first {
             it.fieldsByName["Name"]?.valueString == "Cleric"
@@ -121,6 +125,34 @@ class MyScene : Scene() {
             //    }
         }
         var lastDX = 0f
+
+        fun updateRay() {
+
+            fun IntIArray2.check(it: PointInt): Boolean {
+                if (!this.inside(it.x, it.y)) return true
+                val v = this.getAt(it.x, it.y)
+                return v != 1 && v != 3
+            }
+
+            val ANGLES_COUNT = 64
+            val angles = (0 until ANGLES_COUNT).map { Angle.FULL * (it.toFloat() / ANGLES_COUNT.toFloat()) }
+            val results = angles.map {
+                grid.raycast(Ray(player.pos, it), Size(16, 16), collides = { check(it) })
+            }.filterNotNull()
+
+            annotations.updateShape {
+                for (result in results) {
+                    fill(Colors.RED) {
+                        circle(result, 2f)
+                    }
+                    stroke(Colors.BLUE.withAd(0.5)) {
+                        line(player.pos, result)
+                    }
+                }
+            }
+            //println("result=$result")
+        }
+
         addUpdater(60.hz) {
             val dx = virtualController.lx
             val dy = virtualController.ly
@@ -137,6 +169,7 @@ class MyScene : Scene() {
             player.x += dx.toFloat()
             player.y += dy.toFloat()
             player.zIndex = player.y
+            updateRay()
             //val lx = virtualController.lx
             //when {
             //    lx < 0f -> {
