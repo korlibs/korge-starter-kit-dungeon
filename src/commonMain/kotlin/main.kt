@@ -16,6 +16,7 @@ import korlibs.korge.view.property.*
 import korlibs.korge.view.tiles.*
 import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
+import korlibs.math.interpolation.*
 import korlibs.memory.*
 import korlibs.time.*
 import kotlin.math.*
@@ -138,22 +139,55 @@ class MyScene : Scene() {
 
         fun updateRay(pos: Point): Float {
 
-
             val ANGLES_COUNT = 64
             val angles = (0 until ANGLES_COUNT).map { Angle.FULL * (it.toFloat() / ANGLES_COUNT.toFloat()) }
             //val angles = listOf(Angle.ZERO, Angle.HALF)
-            val results = angles.map {
-                doRay(pos, Vector2.polar(it))
-            }.filterNotNull()
+            val results: ArrayList<RayResult> = arrayListOf()
+
+            val anglesDeque = Deque(angles)
+
+            // @TODO: Try to find gaps and add points in the corners between gaps.
+            // @TODO: Or alternatively, bisect several times rays with a big gap !! <-- IMPLEMENTED
+
+            while (anglesDeque.isNotEmpty()) {
+                val angle = anglesDeque.removeFirst()
+                val last = results.lastOrNull()
+                val current = doRay(pos, Vector2.polar(angle)) ?: continue
+                if (last != null && last.point.distanceTo(current.point) >= 16) {
+                    val lastAngle = last.ray.direction.angle
+                    val currentAngle = current.ray.direction.angle
+                    if ((lastAngle - currentAngle).absoluteValue >= 0.25.degrees) {
+                        anglesDeque.addFirst(angle)
+                        anglesDeque.addFirst(
+                            Angle.fromRatio(0.5.toRatio().interpolate(lastAngle.ratio, currentAngle.ratio))
+                        )
+                        continue
+                    }
+                }
+                results += current
+            }
+
 
             annotations.updateShape {
+                fill(Colors.WHITE.withAd(0.25)) {
+                    var first = true
+                    for (result in results) {
+                        if (first) {
+                            first = false
+                            moveTo(result.point)
+                        } else {
+                            lineTo(result.point)
+                        }
+                    }
+                    close()
+                }
                 for (result in results) {
                     fill(Colors.RED) {
                         circle(result.point, 2f)
                     }
-                    stroke(Colors.BLUE.withAd(0.25)) {
-                        line(pos, result.point)
-                    }
+                    //stroke(Colors.BLUE.withAd(0.1)) {
+                    //    line(pos, result.point)
+                    //}
                 }
                 for (result in results) {
                     stroke(Colors.GREEN) {

@@ -8,7 +8,7 @@ fun RayFromTwoPoints(start: Point, end: Point): Ray = Ray(start, Angle.between(s
 private fun sq(v: Float): Float = v * v
 private fun signumNonZero(v: Float): Float = if (v < 0) -1f else +1f
 
-data class RayResult(val point: Point, val normal: Vector2)
+data class RayResult(val ray: Ray, val point: Point, val normal: Vector2)
 
 // https://www.youtube.com/watch?v=NbSee-XM7WA
 fun Ray.firstCollisionInTileMap(
@@ -67,6 +67,7 @@ fun Ray.firstCollisionInTileMap(
     if (bTileFound) {
         //println("vRayStart=$vRayStart: vRayDir=$vRayDir, fDistance=$fDistance")
         return RayResult(
+            this,
             (rayStart + rayDir * fDistance) * cellSize,
             if (dx == 0) Vector2(-1f * rayDir.x.sign, 0f) else Vector2(0f, -1f * rayDir.y.sign)
         )
