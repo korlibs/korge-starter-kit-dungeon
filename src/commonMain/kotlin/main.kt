@@ -19,7 +19,6 @@ import korlibs.math.geom.*
 import korlibs.math.interpolation.*
 import korlibs.memory.*
 import korlibs.time.*
-import kotlin.math.*
 
 suspend fun main() = Korge(windowSize = Size(512, 512), backgroundColor = Colors["#2b2b2b"]) {
     val sceneContainer = sceneContainer()
@@ -125,6 +124,7 @@ class MyScene : Scene() {
             //    }
         }
         var lastDX = 0f
+        val gridSize = Size(16, 16)
 
         fun IntIArray2.check(it: PointInt): Boolean {
             if (!this.inside(it.x, it.y)) return true
@@ -132,9 +132,12 @@ class MyScene : Scene() {
             return v != 1 && v != 3
         }
 
+        fun hitTest(pos: Point): Boolean {
+            return grid.check((pos / gridSize).toInt())
+        }
+
         fun doRay(pos: Point, dir: Vector2): RayResult? {
-            val size = Size(16, 16)
-            return grid.raycast(Ray(pos, dir), size, collides = { check(it) })
+            return grid.raycast(Ray(pos, dir), gridSize, collides = { check(it) })
         }
 
         fun updateRay(pos: Point): Float {
@@ -218,11 +221,12 @@ class MyScene : Scene() {
                 playerView.scaleX = if (lastDX < 0) -1f else +1f
             }
             val newDir = Vector2(dx.toFloat(), dy.toFloat())
-            val result = doRay(player.pos, newDir)
-            val finalDir = if (result != null && result.point.distanceTo(player.pos) < 6f) {
-                val res = newDir.reflected(result.normal)
+            val oldPos = player.pos
+            val moveRay = doRay(oldPos, newDir)
+            val finalDir = if (moveRay != null && moveRay.point.distanceTo(oldPos) < 6f) {
+                val res = newDir.reflected(moveRay.normal)
                 // @TODO: Improve sliding
-                if (result.normal.y != 0f) {
+                if (moveRay.normal.y != 0f) {
                     Vector2(res.x, 0f)
                 } else {
                     Vector2(0f, res.y)
@@ -230,9 +234,14 @@ class MyScene : Scene() {
             } else {
                 newDir
             }
-            player.pos = player.pos + finalDir
-            player.zIndex = player.y
-            updateRay(player.pos)
+            val newPos = oldPos + finalDir
+            if (!hitTest(newPos) || hitTest(oldPos)) {
+                player.pos = newPos
+                player.zIndex = player.y
+                updateRay(oldPos)
+            } else {
+                println("TODO!!. Checl why is this happening. Operation could have lead to stuck: oldPos=$oldPos -> newPos=$newPos, finalDir=$finalDir, moveRay=$moveRay")
+            }
             //val lx = virtualController.lx
             //when {
             //    lx < 0f -> {
