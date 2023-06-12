@@ -7,8 +7,10 @@ import korlibs.image.bitmap.*
 import korlibs.image.color.*
 import korlibs.image.format.*
 import korlibs.image.tiles.*
+import korlibs.io.async.*
 import korlibs.korge.*
 import korlibs.korge.input.*
+import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
@@ -18,14 +20,15 @@ import korlibs.korge.view.tiles.*
 import korlibs.korge.virtualcontroller.*
 import korlibs.math.*
 import korlibs.math.geom.*
-import korlibs.math.geom.bezier.Bezier.Companion.midX
-import korlibs.math.geom.bezier.Bezier.Companion.midY
 import korlibs.math.geom.ds.*
 import korlibs.math.interpolation.*
 import korlibs.memory.*
 import korlibs.time.*
+import kotlin.math.*
+import korlibs.memory.isAlmostZero
+import korlibs.render.*
 
-suspend fun main() = Korge(windowSize = Size(512, 512), backgroundColor = Colors["#2b2b2b"]) {
+suspend fun main() = Korge(windowSize = Size(512, 512), backgroundColor = Colors["#2b2b2b"], displayMode = KorgeDisplayMode.TOP_LEFT_NO_CLIP) {
     val sceneContainer = sceneContainer()
 
     sceneContainer.changeTo({ MyScene() })
@@ -70,13 +73,25 @@ class MyScene : Scene() {
         //val ldtk = localCurrentDirVfs["../korge-free-gfx/Calciumtrice/tiles/dungeon_tilesmap_calciumtrice.ldtk"].readLDTKWorld()
         val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld()
         val level = ldtk.levelsByName["Level_0"]!!
+
+        val tileEntities = ldtk.levelsByName["TILES"]!!.layersByName["Entities"]
+        val tileEntitiesByName = tileEntities?.layer?.entityInstances?.associateBy { it.fieldInstancesByName["Name"].valueDyn.str } ?: emptyMap()
+        val ClosedChest = tileEntitiesByName["ClosedChest"]
+        val OpenedChest = tileEntitiesByName["OpenedChest"]
+        println("tileEntitiesByName=$tileEntitiesByName")
         //println()
         //LDTKWorldView(ldtk, showCollisions = true).addTo(this)
+        var showAnnotations = true
         lateinit var levelView: LDTKLevelView
         lateinit var annotations: Graphics
+        lateinit var annotations2: Container
         val camera = camera {
-            levelView = LDTKLevelView(level).addTo(this).xy(0, 8)
+        //val camera = container {
+            levelView = LDTKLevelView(level).addTo(this)//.xy(0, 8)
             annotations = graphics {  }
+            //annotations2 = container {  }
+            //setTo(Rectangle(0f, 0f, levelView.width, levelView.height))
+            setTo(Rectangle(0f, 0f, 320f, 320f))
         }
 
         val entitiesBvh = BvhWorld(camera)
@@ -87,7 +102,6 @@ class MyScene : Scene() {
         }
 
         val textInfo = text("")
-        camera.setTo(Rectangle(0f, 0f, levelView.width, levelView.height))
         println(levelView.layerViewsByName.keys)
         val grid = levelView.layerViewsByName["Kind"]!!.intGrid
         val entities = levelView.layerViewsByName["Entities"]!!.entities
@@ -150,29 +164,22 @@ class MyScene : Scene() {
                     button = GameButton.BUTTON_NORTH,
                     anchor = Anchor.BOTTOM_RIGHT,
                     offset = Point(0f, -100f)
+                ),
+                VirtualButtonConfig(
+                    key = Key.Z,
+                    button = GameButton.BUTTON_WEST,
+                    anchor = Anchor.BOTTOM_RIGHT,
+                    offset = Point(0f, -200f)
                 )
             ),
         )
 
-        var playerState = ""
-        virtualController.apply {
-            down(GameButton.BUTTON_SOUTH) {
-                val playerView = (player.view as ImageDataView2)
-                //playerView.animation = "attack"
-                playerState = "attack"
-            }
-            down(GameButton.BUTTON_NORTH) {
-                val playerView = (player.view as ImageDataView2)
-                //playerView.animation = "attack"
-                playerState = "gesture"
-            }
-            //changed(GameButton.LX) {
-            //    if (it.new.absoluteValue < 0.01f) {
-            //        updated(right = it.new > 0f, up = true, scale = 1f)
-            //    }
-        }
-        var lastDX = 0f
+        var lastInteractiveView: View? = null
+        var playerDirection = Vector2(1f, 0f)
         val gridSize = Size(16, 16)
+
+        var playerState = ""
+
 
         fun IntIArray2.check(it: PointInt): Boolean {
             if (!this.inside(it.x, it.y)) return true
@@ -182,13 +189,18 @@ class MyScene : Scene() {
 
         fun hitTest(pos: Point): Boolean {
             for (result in entitiesBvh.bvh.search(Rectangle.fromBounds(pos - Point(1, 1), pos + Point(1, 1)))) {
-                if (result.value?.view == player) continue
+                val view = result.value?.view ?: continue
+                if (view == player) continue
+                val entityView = view as? LDTKEntityView
+                val doBlock = entityView?.fieldsByName?.get("Collides")
+                if (doBlock?.valueString == "false") continue
+
                 return true
             }
             return grid.check((pos / gridSize).toInt())
         }
 
-        fun doRay(pos: Point, dir: Vector2): RayResult? {
+        fun doRay(pos: Point, dir: Vector2, property: String): RayResult? {
             // @TODO: FIXME! This is required because BVH produces wrong intersect distance for completely vertical rays. We should fix that.
             val dir = Vector2(
                 if (dir.x.isAlmostEquals(0f)) .00001f else dir.x,
@@ -196,9 +208,12 @@ class MyScene : Scene() {
             )
             val ray = Ray(pos, dir)
             val outResults = arrayListOf<RayResult?>()
+            val blockedResults = arrayListOf<RayResult>()
             outResults += grid.raycast(ray, gridSize, collides = { check(it) })?.also { it.view = null }
             for (result in entitiesBvh.bvh.intersect(ray)) {
-                if (result.obj.value?.view == player) continue
+                val view = result.obj.value?.view
+                if (view == player) continue
+
                 // NARROW result. And try for example to use circles, capsules or smaller rectangles covering only the base of the object
                 val rect = result.obj.d.toRectangle()
                 val intersectionPos = ray.point + ray.direction.normalized * result.intersect
@@ -207,10 +222,28 @@ class MyScene : Scene() {
                 //}
                 val normalX = if (intersectionPos.x <= rect.left + 0.5f) -1f else if (intersectionPos.x >= rect.right - .5f) +1f else 0f
                 val normalY = if (intersectionPos.y <= rect.top + 0.5f) -1f else if (intersectionPos.y >= rect.bottom - .5f) +1f else 0f
-                outResults += RayResult(ray, intersectionPos, Vector2(normalX, normalY))?.also { it.view = result.obj.value?.view }
+                val rayResult = RayResult(ray, intersectionPos, Vector2(normalX, normalY))?.also { it.view = view }
+
+                val entityView = view as? LDTKEntityView
+                val doBlock = entityView?.fieldsByName?.get(property)
+                if (rayResult != null && doBlock?.valueString == "false") {
+                    blockedResults += rayResult
+                    continue
+                }
+
+                outResults += rayResult
             }
             //println("results=$results")
-            return outResults.filterNotNull().minByOrNull { it.point.distanceTo(pos) }
+            return outResults.filterNotNull().minByOrNull { it.point.distanceTo(pos) }?.also { res ->
+                val dist = res.point.distanceTo(pos)
+                res.blockedResults = blockedResults.filter { it!!.point.distanceTo(pos) < dist }
+            }
+        }
+
+        fun getInteractiveView(): View? {
+            val results = doRay(player.pos, playerDirection, "Collides") ?: return null
+            if (results.point.distanceTo(player.pos) >= 16f) return null
+            return results.view
         }
 
         fun updateRay(pos: Point): Float {
@@ -218,6 +251,7 @@ class MyScene : Scene() {
             val angles = (0 until ANGLES_COUNT).map { Angle.FULL * (it.toFloat() / ANGLES_COUNT.toFloat()) }
             //val angles = listOf(Angle.ZERO, Angle.HALF)
             val results: ArrayList<RayResult> = arrayListOf()
+            val results2: ArrayList<RayResult> = arrayListOf()
 
             val anglesDeque = Deque(angles)
 
@@ -227,7 +261,11 @@ class MyScene : Scene() {
             while (anglesDeque.isNotEmpty()) {
                 val angle = anglesDeque.removeFirst()
                 val last = results.lastOrNull()
-                val current = doRay(pos, Vector2.polar(angle)) ?: continue
+                val current = doRay(pos, Vector2.polar(angle), "Occludes") ?: continue
+                current?.blockedResults?.let {
+                    results2 += it.filterNotNull()
+                }
+                //println(doBlock?.valueString)
                 if (last != null && (last.point.distanceTo(current.point) >= 16 || last.normal != current.normal)) {
                     val lastAngle = last.ray.direction.angle
                     val currentAngle = current.ray.direction.angle
@@ -243,16 +281,18 @@ class MyScene : Scene() {
             }
 
             entities.fastForEach {
-                it.alpha = if (it != player) .25f else 1f
+                if ("hide_on_fog" in it.entity.tags) {
+                    it.alpha = if (it != player) .25f else 1f
+                }
             }
 
-            for (result in results) {
+            for (result in (results + results2)) {
                 result.view?.alpha = 1f
             }
 
             textInfo.text = "Rays: ${results.size}"
             annotations.updateShape {
-                fill(Colors.WHITE.withAd(0.25)) {
+                fill(Colors.YELLOW.withAd(0.25)) {
                     var first = true
                     for (result in results) {
                         if (first) {
@@ -264,29 +304,43 @@ class MyScene : Scene() {
                     }
                     close()
                 }
-                for (result in results) {
-                    fill(Colors.RED) {
-                        circle(result.point, 2f)
+                if (showAnnotations) {
+                    for (result in results) {
+                        fill(Colors.RED) {
+                            circle(result.point, 2f)
+                        }
+                        //stroke(Colors.BLUE.withAd(0.1)) {
+                        //    line(pos, result.point)
+                        //}
                     }
-                    //stroke(Colors.BLUE.withAd(0.1)) {
-                    //    line(pos, result.point)
+                    for (result in results) {
+                        stroke(Colors.GREEN) {
+                            line(result.point, result.point + result.normal * 4f)
+                        }
+
+                        val newVec = (result.point - pos).reflected(result.normal).normalized
+                        stroke(Colors.YELLOW) {
+                            line(result.point, result.point + newVec * 4f)
+                        }
+                    }
+                }
+
+                if (showAnnotations) {
+                    //annotations2.removeChildren()
+                    //for (n in 0 until 16) {
+                    //    annotations2.solidRect(Size(256, 1), Colors.SADDLEBROWN).xy(0, n * 16)
                     //}
-                }
-                for (result in results) {
-                    stroke(Colors.GREEN) {
-                        line(result.point, result.point + result.normal * 4f)
-                    }
+                    //stroke(Colors.SADDLEBROWN) {
+                    //    for (n in 0 until 16) {
+                    //        line(Point(0, n * 16), Point(256, n * 16))
+                    //    }
+                    //}
 
-                    val newVec = (result.point - pos).reflected(result.normal).normalized
-                    stroke(Colors.YELLOW) {
-                        line(result.point, result.point + newVec * 4f)
-                    }
-                }
-
-                for (entity in entitiesBvh.getAll()) {
-                    //println("entity: ${entity.d.toRectangle()}")
-                    stroke(Colors.PURPLE.withAd(0.1)) {
-                        rect(entity.d.toRectangle())
+                    for (entity in entitiesBvh.getAll()) {
+                        //println("entity: ${entity.d.toRectangle()}")
+                        stroke(Colors.PURPLE.withAd(0.1)) {
+                            rect(entity.d.toRectangle())
+                        }
                     }
                 }
             }
@@ -299,17 +353,20 @@ class MyScene : Scene() {
             val dy = virtualController.ly
 
             val playerView = (player.view as ImageDataView2)
-            if (dx != 0f) lastDX = dx
+            if (!dx.isAlmostZero() || !dy.isAlmostZero()) {
+                playerDirection = Vector2(dx.normalizeAlmostZero().sign, dy.normalizeAlmostZero().sign)
+                //println("playerDirection=$playerDirection")
+            }
             if (dx == 0f && dy == 0f) {
                 playerView.animation = if (playerState != "") playerState else "idle"
             } else {
                 playerState = ""
                 playerView.animation = "walk"
-                playerView.scaleX = if (lastDX < 0) -1f else +1f
+                playerView.scaleX = if (playerDirection.x < 0) -1f else +1f
             }
             val newDir = Vector2(dx.toFloat(), dy.toFloat())
             val oldPos = player.pos
-            val moveRay = doRay(oldPos, newDir)
+            val moveRay = doRay(oldPos, newDir, "Collides")
             val finalDir = if (moveRay != null && moveRay.point.distanceTo(oldPos) < 6f) {
                 val res = newDir.reflected(moveRay.normal)
                 // @TODO: Improve sliding
@@ -329,6 +386,13 @@ class MyScene : Scene() {
             } else {
                 println("TODO!!. Check why is this happening. Operation could have lead to stuck: oldPos=$oldPos -> newPos=$newPos, finalDir=$finalDir, moveRay=$moveRay")
             }
+
+            lastInteractiveView?.colorMul = Colors.WHITE
+            val interactiveView = getInteractiveView()
+            if (interactiveView != null) {
+                interactiveView.colorMul = Colors.RED
+                lastInteractiveView = interactiveView
+            }
             //val lx = virtualController.lx
             //when {
             //    lx < 0f -> {
@@ -339,6 +403,51 @@ class MyScene : Scene() {
             //    }
             //}
         }
+
+        virtualController.apply {
+            fun onAnyButton() {
+                val view = getInteractiveView() ?: return
+                val entityView = view as? LDTKEntityView ?: return
+                val doBlock = entityView?.fieldsByName?.get("Items") ?: return
+                val items = doBlock.valueDyn.list.map { it.str }
+
+                val tile = OpenedChest!!.tile!!
+                entityView.replaceView(
+                    Image(entityView!!.tileset!!.unextrudedTileSet!!.base.sliceWithSize(tile.x, tile.y, tile.w, tile.h)).also {
+                        it.smoothing = false
+                        it.anchor(entityView.anchor)
+                    }
+                )
+
+                launchImmediately {
+                    gameWindow.alert("Found $items")
+                }
+
+                //if (rayResult != null && doBlock?.valueString == "false") {
+                println("INTERACTED WITH: " + view + " :: ${doBlock.value!!::class}, ${doBlock.value}")
+            }
+
+            down(GameButton.BUTTON_WEST) {
+                showAnnotations = !showAnnotations
+            }
+            down(GameButton.BUTTON_SOUTH) {
+                val playerView = (player.view as ImageDataView2)
+                //playerView.animation = "attack"
+                playerState = "attack"
+                onAnyButton()
+            }
+            down(GameButton.BUTTON_NORTH) {
+                val playerView = (player.view as ImageDataView2)
+                //playerView.animation = "attack"
+                playerState = "gesture"
+                onAnyButton()
+            }
+            //changed(GameButton.LX) {
+            //    if (it.new.absoluteValue < 0.01f) {
+            //        updated(right = it.new > 0f, up = true, scale = 1f)
+            //    }
+        }
+
     }
 
     /*
@@ -669,3 +778,4 @@ inline operator fun Vector2.rem(that: Size): Vector2 = Point(x % that.width, y %
 inline operator fun Vector2.rem(that: Float): Vector2 = Point(x % that, y % that)
 
 private var RayResult.view: View? by Extra.Property { null }
+private var RayResult.blockedResults: List<RayResult>? by Extra.Property { null }
