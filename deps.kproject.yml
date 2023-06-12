@@ -1,4 +1,4 @@
 dependencies:
-- https://github.com/korlibs/korge-ldtk/tree/v0.0.3/korge-ldtk##39dd48ea60d7976d217539649c0c229df2948ace
+- https://github.com/korlibs/korge-ldtk/tree/v0.0.4/korge-ldtk##a4e753a009531dc1206b421f8bd9eeee0274a126
 - https://github.com/korlibs/korge-virtualcontroller/tree/0.0.4/korge-virtualcontroller##2e465059da35e9fb813ae87f40e6a11f68152cf7
 #- https://github.com/korlibs/korge-ext/tree/v0.0.3/korma-tile-raycasting/korma-tile-raycasting##a88993c199f42cc00a2044b81b089a5cc3fb3a6b
