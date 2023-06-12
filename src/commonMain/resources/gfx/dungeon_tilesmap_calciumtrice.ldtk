@@ -11,7 +11,7 @@
 	"iid": "8db93ce0-ed50-11ed-926a-4957c7fbc019",
 	"jsonVersion": "1.3.2",
 	"appBuildId": 467536,
-	"nextUid": 189,
+	"nextUid": 190,
 	"identifierStyle": "Capitalize",
 	"toc": [],
 	"worldLayout": "Free",
@@ -2623,6 +2623,40 @@
 					"tilesetUid": 1
 				},
 				{
+					"identifier": "Name",
+					"doc": null,
+					"__type": "String",
+					"uid": 188,
+					"type": "F_String",
+					"isArray": false,
+					"canBeNull": true,
+					"arrayMinLength": null,
+					"arrayMaxLength": null,
+					"editorDisplayMode": "ValueOnly",
+					"editorDisplayScale": 1,
+					"editorDisplayPos": "Beneath",
+					"editorLinkStyle": "StraightArrow",
+					"editorAlwaysShow": false,
+					"editorShowInWorld": true,
+					"editorCutLongValues": false,
+					"editorTextSuffix": null,
+					"editorTextPrefix": null,
+					"useForSmartColor": false,
+					"min": null,
+					"max": null,
+					"regex": null,
+					"acceptFileTypes": null,
+					"defaultOverride": null,
+					"textLanguageMode": null,
+					"symmetricalRef": false,
+					"autoChainRef": true,
+					"allowOutOfLevelRef": true,
+					"allowedRefs": "OnlySame",
+					"allowedRefsEntityUid": null,
+					"allowedRefTags": [],
+					"tilesetUid": null
+				},
+				{
 					"identifier": "Collides",
 					"doc": null,
 					"__type": "Bool",
@@ -2648,7 +2682,7 @@
 					"acceptFileTypes": null,
 					"defaultOverride": {
 						"id": "V_Bool",
-						"params": [ true ]
+						"params": [ false ]
 					},
 					"textLanguageMode": null,
 					"symmetricalRef": false,
@@ -2660,22 +2694,22 @@
 					"tilesetUid": null
 				},
 				{
-					"identifier": "Name",
+					"identifier": "Occludes",
 					"doc": null,
-					"__type": "String",
-					"uid": 188,
-					"type": "F_String",
+					"__type": "Bool",
+					"uid": 189,
+					"type": "F_Bool",
 					"isArray": false,
-					"canBeNull": true,
+					"canBeNull": false,
 					"arrayMinLength": null,
 					"arrayMaxLength": null,
-					"editorDisplayMode": "ValueOnly",
-					"editorDisplayScale": 1,
-					"editorDisplayPos": "Beneath",
+					"editorDisplayMode": "Hidden",
+					"editorDisplayScale": 0,
+					"editorDisplayPos": "Above",
 					"editorLinkStyle": "StraightArrow",
 					"editorAlwaysShow": false,
 					"editorShowInWorld": true,
-					"editorCutLongValues": false,
+					"editorCutLongValues": true,
 					"editorTextSuffix": null,
 					"editorTextPrefix": null,
 					"useForSmartColor": false,
@@ -3467,8 +3501,9 @@
 							"px": [144,144],
 							"fieldInstances": [
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "defUid": 162, "realEditorValues": [] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 179, "realEditorValues": [] },
-								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] }
+								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
 							]
 						},
 						{
@@ -3485,8 +3520,9 @@
 							"px": [240,144],
 							"fieldInstances": [
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "defUid": 162, "realEditorValues": [] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 179, "realEditorValues": [] },
-								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] }
+								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
 							]
 						},
 						{
@@ -3503,8 +3539,9 @@
 							"px": [384,160],
 							"fieldInstances": [
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "defUid": 162, "realEditorValues": [] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 179, "realEditorValues": [] },
-								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] }
+								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
 							]
 						},
 						{
@@ -3521,8 +3558,9 @@
 							"px": [16,176],
 							"fieldInstances": [
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "defUid": 162, "realEditorValues": [] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 179, "realEditorValues": [] },
-								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] }
+								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
 							]
 						},
 						{
@@ -3539,8 +3577,9 @@
 							"px": [128,64],
 							"fieldInstances": [
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "defUid": 162, "realEditorValues": [] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 179, "realEditorValues": [] },
-								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] }
+								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
 							]
 						},
 						{
@@ -3557,8 +3596,9 @@
 							"px": [240,64],
 							"fieldInstances": [
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "defUid": 162, "realEditorValues": [] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 179, "realEditorValues": [] },
-								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] }
+								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
 							]
 						}
 					]
@@ -4412,8 +4452,9 @@
 							"px": [96,86],
 							"fieldInstances": [
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "defUid": 162, "realEditorValues": [] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 179, "realEditorValues": [] },
-								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] }
+								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
 							]
 						},
 						{
@@ -4430,8 +4471,9 @@
 							"px": [64,86],
 							"fieldInstances": [
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "defUid": 162, "realEditorValues": [] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 179, "realEditorValues": [] },
-								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] }
+								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
 							]
 						},
 						{
@@ -4846,11 +4888,12 @@
 							"px": [144,64],
 							"fieldInstances": [
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 176, "y": 304, "w": 16, "h": 32 }, "defUid": 162, "realEditorValues": [] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 179, "realEditorValues": [] },
 								{ "__identifier": "Name", "__type": "String", "__value": "Torch1", "__tile": null, "defUid": 188, "realEditorValues": [{
 									"id": "V_String",
 									"params": ["Torch1"]
-								}] }
+								}] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
 							]
 						},
 						{
@@ -4870,11 +4913,12 @@
 									"id": "V_String",
 									"params": ["192,304,16,32"]
 								}] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 179, "realEditorValues": [] },
 								{ "__identifier": "Name", "__type": "String", "__value": "Torch2", "__tile": null, "defUid": 188, "realEditorValues": [{
 									"id": "V_String",
 									"params": ["Torch2"]
-								}] }
+								}] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
 							]
 						},
 						{
@@ -4894,11 +4938,12 @@
 									"id": "V_String",
 									"params": ["208,304,16,32"]
 								}] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 179, "realEditorValues": [] },
 								{ "__identifier": "Name", "__type": "String", "__value": "Torch3", "__tile": null, "defUid": 188, "realEditorValues": [{
 									"id": "V_String",
 									"params": ["Torch3"]
-								}] }
+								}] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
 							]
 						}
 					]

@@ -328,6 +328,12 @@ class MyScene : Scene() {
                     }
                     close()
                 }
+                fill(Colors.WHITE) {
+                    for (result in results) {
+                        val view = result.view ?: continue
+                        rect(view.getBounds(highlight).expanded(MarginInt(-2)))
+                    }
+                }
             }
             annotations.updateShape {
                 if (showAnnotations) {
@@ -390,7 +396,8 @@ class MyScene : Scene() {
                 playerView.animation = "walk"
                 playerView.scaleX = if (playerDirection.x < 0) -1f else +1f
             }
-            val newDir = Vector2(dx.toFloat(), dy.toFloat())
+            val speed = 1.5f
+            val newDir = Vector2(dx.toFloat() * speed, dy.toFloat() * speed)
             val oldPos = player.pos
             val moveRay = doRay(oldPos, newDir, "Collides")
             val finalDir = if (moveRay != null && moveRay.point.distanceTo(oldPos) < 6f) {
