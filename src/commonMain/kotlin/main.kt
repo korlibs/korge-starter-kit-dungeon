@@ -9,12 +9,17 @@ import korlibs.image.format.*
 import korlibs.image.tiles.*
 import korlibs.io.async.*
 import korlibs.korge.*
+import korlibs.korge.animate.*
 import korlibs.korge.input.*
 import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
+import korlibs.korge.tween.*
+import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.korge.view.animation.*
+import korlibs.korge.view.filter.*
+import korlibs.korge.view.mask.*
 import korlibs.korge.view.property.*
 import korlibs.korge.view.tiles.*
 import korlibs.korge.virtualcontroller.*
@@ -28,7 +33,7 @@ import kotlin.math.*
 import korlibs.memory.isAlmostZero
 import korlibs.render.*
 
-suspend fun main() = Korge(windowSize = Size(512, 512), backgroundColor = Colors["#2b2b2b"], displayMode = KorgeDisplayMode.TOP_LEFT_NO_CLIP) {
+suspend fun main() = Korge(windowSize = Size(1280, 720), backgroundColor = Colors["#2b2b2b"], displayMode = KorgeDisplayMode.TOP_LEFT_NO_CLIP) {
     val sceneContainer = sceneContainer()
 
     sceneContainer.changeTo({ MyScene() })
@@ -85,14 +90,22 @@ class MyScene : Scene() {
         lateinit var levelView: LDTKLevelView
         lateinit var annotations: Graphics
         lateinit var annotations2: Container
+        lateinit var highlight: Graphics
         val camera = camera {
         //val camera = container {
             levelView = LDTKLevelView(level).addTo(this)//.xy(0, 8)
+            highlight = graphics { }.filters(BlurFilter(2f))
             annotations = graphics {  }
             //annotations2 = container {  }
             //setTo(Rectangle(0f, 0f, levelView.width, levelView.height))
-            setTo(Rectangle(0f, 0f, 320f, 320f))
+            setTo(Rectangle(0f, 0f, 1280f, 720f) * 0.5f)
         }
+
+        //camera.mask(highlight.also { it.visible = false })
+        levelView.mask(highlight)
+        highlight.visible = false
+
+        uiButton("Reload") { onClick { sceneContainer.changeTo({ MyScene() }) } }
 
         val entitiesBvh = BvhWorld(camera)
         addUpdater {
@@ -280,19 +293,29 @@ class MyScene : Scene() {
                 results += current
             }
 
-            entities.fastForEach {
-                if ("hide_on_fog" in it.entity.tags) {
-                    it.alpha = if (it != player) .25f else 1f
+            entities.fastForEach { entity ->
+                if ("hide_on_fog" in entity.entity.tags) {
+                    entity.simpleAnimator.cancel().sequence {
+                        tween(entity::alpha[if (entity != player) .1f else 1f], time = 0.25.seconds)
+                    }
                 }
             }
 
             for (result in (results + results2)) {
-                result.view?.alpha = 1f
+                val view = result.view ?: continue
+                if (view.alpha != 1f) {
+                    view.simpleAnimator.cancel().sequence {
+                        tween(view::alpha[1f], time = 0.25.seconds)
+                    }
+                }
             }
 
             textInfo.text = "Rays: ${results.size}"
-            annotations.updateShape {
-                fill(Colors.YELLOW.withAd(0.25)) {
+            highlight.updateShape {
+                fill(Colors["#FFFFFF44"]) {
+                    rect(0, 0, 600, 500)
+                }
+                fill(Colors.WHITE) {
                     var first = true
                     for (result in results) {
                         if (first) {
@@ -304,6 +327,8 @@ class MyScene : Scene() {
                     }
                     close()
                 }
+            }
+            annotations.updateShape {
                 if (showAnnotations) {
                     for (result in results) {
                         fill(Colors.RED) {
@@ -388,10 +413,13 @@ class MyScene : Scene() {
             }
 
             lastInteractiveView?.colorMul = Colors.WHITE
+            //lastInteractiveView?.filters()
             val interactiveView = getInteractiveView()
             if (interactiveView != null) {
-                interactiveView.colorMul = Colors.RED
+                interactiveView.colorMul = Colors["#ffbec3"]
+                //interactiveView.filters(DropshadowFilter(0f, 0f, Colors.RED, blurRadius = 1f))
                 lastInteractiveView = interactiveView
+            } else {
             }
             //val lx = virtualController.lx
             //when {
