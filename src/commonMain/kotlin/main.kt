@@ -94,7 +94,8 @@ class MyScene : Scene() {
         val camera = camera {
         //val camera = container {
             levelView = LDTKLevelView(level).addTo(this)//.xy(0, 8)
-            highlight = graphics { }.filters(BlurFilter(2f))
+            highlight = graphics { }
+                .filters(BlurFilterEx(2f).also { it.filtering = false })
             annotations = graphics {  }
             //annotations2 = container {  }
             //setTo(Rectangle(0f, 0f, levelView.width, levelView.height))
@@ -102,7 +103,7 @@ class MyScene : Scene() {
         }
 
         //camera.mask(highlight.also { it.visible = false })
-        levelView.mask(highlight)
+        levelView.mask2(highlight, filtering = false)
         highlight.visible = false
 
         uiButton("Reload") { onClick { sceneContainer.changeTo({ MyScene() }) } }
@@ -312,7 +313,7 @@ class MyScene : Scene() {
 
             textInfo.text = "Rays: ${results.size}"
             highlight.updateShape {
-                fill(Colors["#FFFFFF44"]) {
+                fill(Colors["#FFFFFF55"]) {
                     rect(0, 0, 600, 500)
                 }
                 fill(Colors.WHITE) {
@@ -807,3 +808,36 @@ inline operator fun Vector2.rem(that: Float): Vector2 = Point(x % that, y % that
 
 private var RayResult.view: View? by Extra.Property { null }
 private var RayResult.blockedResults: List<RayResult>? by Extra.Property { null }
+
+class BlurFilterEx(
+    radius: Float = 4f,
+    expandBorder: Boolean = true,
+    @ViewProperty
+    var optimize: Boolean = true
+) : ComposedFilter() {
+    private val horizontal = DirectionalBlurFilter(angle = 0.degrees, radius, expandBorder).also { filters.add(it) }
+    private val vertical = DirectionalBlurFilter(angle = 90.degrees, radius, expandBorder).also { filters.add(it) }
+    var filtering: Boolean
+        get() = horizontal.filtering
+        set(value) {
+            horizontal.filtering = value
+            vertical.filtering = value
+        }
+    @ViewProperty
+    var expandBorder: Boolean
+        get() = horizontal.expandBorder
+        set(value) {
+            horizontal.expandBorder = value
+            vertical.expandBorder = value
+        }
+    @ViewProperty
+    var radius: Float = radius
+        set(value) {
+            field = value
+            horizontal.radius = radius
+            vertical.radius = radius
+        }
+    override val recommendedFilterScale: Float get() = if (!optimize || radius <= 2.0) 1f else 1f / log2(radius.toFloat() * 0.5f)
+
+    override val isIdentity: Boolean get() = radius == 0f
+}
