@@ -5,6 +5,7 @@ import korlibs.event.*
 import korlibs.image.atlas.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
+import korlibs.image.font.*
 import korlibs.image.format.*
 import korlibs.image.tiles.*
 import korlibs.io.async.*
@@ -72,6 +73,7 @@ class MyScene : Scene() {
     override suspend fun SContainer.sceneMain() {
         //val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld()
         val atlas = MutableAtlasUnit()
+        val font = KR.fonts.publicpixel.__file.readTtfFont().lazyBitmapSDF
         val wizardFemale = KR.gfx.wizardF.__file.readImageDataContainer(ASE.toProps(), atlas)
         val clericFemale = KR.gfx.clericF.__file.readImageDataContainer(ASE.toProps(), atlas)
         val minotaur = KR.gfx.minotaur.__file.readImageDataContainer(ASE.toProps(), atlas)
@@ -115,7 +117,7 @@ class MyScene : Scene() {
             }
         }
 
-        val textInfo = text("")
+        val textInfo = text("", font = font).xy(120, 8)
         println(levelView.layerViewsByName.keys)
         val grid = levelView.layerViewsByName["Kind"]!!.intGrid
         val entities = levelView.layerViewsByName["Entities"]!!.entities
