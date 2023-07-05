@@ -28,6 +28,7 @@ import korlibs.math.*
 import korlibs.math.geom.*
 import korlibs.math.geom.ds.*
 import korlibs.math.interpolation.*
+import korlibs.math.raycasting.*
 import korlibs.memory.*
 import korlibs.time.*
 import kotlin.math.*
@@ -73,8 +74,11 @@ class MyScene : Scene() {
     override suspend fun SContainer.sceneMain() {
         //val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld()
         val atlas = MutableAtlasUnit()
+
         val font = KR.fonts.publicpixel.__file.readTtfFont().lazyBitmapSDF
+
         val wizardFemale = KR.gfx.wizardF.__file.readImageDataContainer(ASE.toProps(), atlas)
+
         val clericFemale = KR.gfx.clericF.__file.readImageDataContainer(ASE.toProps(), atlas)
         val minotaur = KR.gfx.minotaur.__file.readImageDataContainer(ASE.toProps(), atlas)
         //val ldtk = localCurrentDirVfs["../korge-free-gfx/Calciumtrice/tiles/dungeon_tilesmap_calciumtrice.ldtk"].readLDTKWorld()
@@ -105,7 +109,8 @@ class MyScene : Scene() {
         }
 
         //camera.mask(highlight.also { it.visible = false })
-        levelView.mask2(highlight, filtering = false)
+        //levelView.mask2(highlight, filtering = false)
+        levelView.mask(highlight, filtering = false)
         highlight.visible = false
 
         uiButton("Reload") { onClick { sceneContainer.changeTo({ MyScene() }) } }
@@ -440,6 +445,13 @@ class MyScene : Scene() {
             //        updated(right = true, up = false, scale = lx.absoluteValue)
             //    }
             //}
+
+        }
+
+        keys {
+            down(Key.R) {
+                println(player.pos)
+            }
         }
 
         virtualController.apply {
@@ -485,7 +497,6 @@ class MyScene : Scene() {
             //        updated(right = it.new > 0f, up = true, scale = 1f)
             //    }
         }
-
     }
 
     /*
@@ -850,3 +861,14 @@ class BlurFilterEx(
 
     override val isIdentity: Boolean get() = radius == 0f
 }
+
+private fun Vector2.reflected(surfaceNormal: Vector2): Vector2 {
+    val d = this
+    val n = surfaceNormal
+    return d - 2f * (d dot n) * n
+}
+
+// https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
+//𝑟=𝑑−2(𝑑⋅𝑛)𝑛
+private operator fun Float.times(v: Vector3): Vector3 = v * this
+private operator fun Float.times(v: Vector2): Vector2 = v * this
