@@ -32,13 +32,12 @@ import korlibs.math.raycasting.*
 import korlibs.memory.*
 import korlibs.time.*
 import kotlin.math.*
-import korlibs.memory.isAlmostZero
 import korlibs.render.*
 
 suspend fun main() = Korge(windowSize = Size(1280, 720), backgroundColor = Colors["#2b2b2b"], displayMode = KorgeDisplayMode.TOP_LEFT_NO_CLIP) {
     val sceneContainer = sceneContainer()
 
-    sceneContainer.changeTo({ MyScene() })
+    sceneContainer.changeTo { MyScene() }
 }
 
 class BvhWorld(val baseView: View) {
@@ -92,7 +91,8 @@ class MyScene : Scene() {
         println("tileEntitiesByName=$tileEntitiesByName")
         //println()
         //LDTKWorldView(ldtk, showCollisions = true).addTo(this)
-        var showAnnotations = true
+        //var showAnnotations = true
+        var showAnnotations = false
         lateinit var levelView: LDTKLevelView
         lateinit var annotations: Graphics
         lateinit var annotations2: Container
@@ -101,11 +101,11 @@ class MyScene : Scene() {
         //val camera = container {
             levelView = LDTKLevelView(level).addTo(this)//.xy(0, 8)
             highlight = graphics { }
-                .filters(BlurFilterEx(2f).also { it.filtering = false })
+                .filters(BlurFilter(2.0).also { it.filtering = false })
             annotations = graphics {  }
             //annotations2 = container {  }
             //setTo(Rectangle(0f, 0f, levelView.width, levelView.height))
-            setTo(Rectangle(0f, 0f, 1280f, 720f) * 0.5f)
+            setTo(Rectangle(0, 0, 1280, 720) * 0.5)
         }
 
         //camera.mask(highlight.also { it.visible = false })
@@ -113,7 +113,7 @@ class MyScene : Scene() {
         levelView.mask(highlight, filtering = false)
         highlight.visible = false
 
-        uiButton("Reload") { onClick { sceneContainer.changeTo({ MyScene() }) } }
+        uiButton("Reload") { onClick { sceneContainer.changeTo { MyScene() } } }
 
         val entitiesBvh = BvhWorld(camera)
         addUpdater {
@@ -196,7 +196,7 @@ class MyScene : Scene() {
         )
 
         var lastInteractiveView: View? = null
-        var playerDirection = Vector2(1f, 0f)
+        var playerDirection = Vector2D(1.0, 0.0)
         val gridSize = Size(16, 16)
 
         var playerState = ""
@@ -221,11 +221,11 @@ class MyScene : Scene() {
             return grid.check((pos / gridSize).toInt())
         }
 
-        fun doRay(pos: Point, dir: Vector2, property: String): RayResult? {
+        fun doRay(pos: Point, dir: Vector2D, property: String): RayResult? {
             // @TODO: FIXME! This is required because BVH produces wrong intersect distance for completely vertical rays. We should fix that.
-            val dir = Vector2(
-                if (dir.x.isAlmostEquals(0f)) .00001f else dir.x,
-                if (dir.y.isAlmostEquals(0f)) .00001f else dir.y,
+            val dir = Vector2D(
+                if (dir.x.isAlmostEquals(0.0)) .00001 else dir.x,
+                if (dir.y.isAlmostEquals(0.0)) .00001 else dir.y,
             )
             val ray = Ray(pos, dir)
             val outResults = arrayListOf<RayResult?>()
@@ -243,7 +243,7 @@ class MyScene : Scene() {
                 //}
                 val normalX = if (intersectionPos.x <= rect.left + 0.5f) -1f else if (intersectionPos.x >= rect.right - .5f) +1f else 0f
                 val normalY = if (intersectionPos.y <= rect.top + 0.5f) -1f else if (intersectionPos.y >= rect.bottom - .5f) +1f else 0f
-                val rayResult = RayResult(ray, intersectionPos, Vector2(normalX, normalY))?.also { it.view = view }
+                val rayResult = RayResult(ray, intersectionPos, Vector2D(normalX, normalY))?.also { it.view = view }
 
                 val entityView = view as? LDTKEntityView
                 val doBlock = entityView?.fieldsByName?.get(property)
@@ -267,9 +267,9 @@ class MyScene : Scene() {
             return results.view
         }
 
-        fun updateRay(pos: Point): Float {
+        fun updateRay(pos: Point): Double {
             val ANGLES_COUNT = 64
-            val angles = (0 until ANGLES_COUNT).map { Angle.FULL * (it.toFloat() / ANGLES_COUNT.toFloat()) }
+            val angles = (0 until ANGLES_COUNT).map { Angle.FULL * (it.toDouble() / ANGLES_COUNT.toDouble()) }
             //val angles = listOf(Angle.ZERO, Angle.HALF)
             val results: ArrayList<RayResult> = arrayListOf()
             val results2: ArrayList<RayResult> = arrayListOf()
@@ -282,7 +282,7 @@ class MyScene : Scene() {
             while (anglesDeque.isNotEmpty()) {
                 val angle = anglesDeque.removeFirst()
                 val last = results.lastOrNull()
-                val current = doRay(pos, Vector2.polar(angle), "Occludes") ?: continue
+                val current = doRay(pos, Vector2D.polar(angle), "Occludes") ?: continue
                 current?.blockedResults?.let {
                     results2 += it.filterNotNull()
                 }
@@ -311,7 +311,7 @@ class MyScene : Scene() {
 
             for (result in (results + results2)) {
                 val view = result.view ?: continue
-                if (view.alpha != 1f) {
+                if (view.alpha != 1.0) {
                     view.simpleAnimator.cancel().sequence {
                         tween(view::alpha[1f], time = 0.25.seconds)
                     }
@@ -346,7 +346,7 @@ class MyScene : Scene() {
                 if (showAnnotations) {
                     for (result in results) {
                         fill(Colors.RED) {
-                            circle(result.point, 2f)
+                            circle(result.point, 2.0)
                         }
                         //stroke(Colors.BLUE.withAd(0.1)) {
                         //    line(pos, result.point)
@@ -383,37 +383,37 @@ class MyScene : Scene() {
                     }
                 }
             }
-            return results.map { it.point.distanceTo(pos) }.minOrNull() ?: 0f
+            return results.map { it.point.distanceTo(pos) }.minOrNull() ?: 0.0
             //println("result=$result")
         }
 
         addUpdater(60.hz) {
-            val dx = virtualController.lx
-            val dy = virtualController.ly
+            val dx = virtualController.lx.toDouble()
+            val dy = virtualController.ly.toDouble()
 
             val playerView = (player.view as ImageDataView2)
             if (!dx.isAlmostZero() || !dy.isAlmostZero()) {
-                playerDirection = Vector2(dx.normalizeAlmostZero().sign, dy.normalizeAlmostZero().sign)
+                playerDirection = Vector2D(dx.sign, dy.sign)
                 //println("playerDirection=$playerDirection")
             }
-            if (dx == 0f && dy == 0f) {
+            if (dx == 0.0 && dy == 0.0) {
                 playerView.animation = if (playerState != "") playerState else "idle"
             } else {
                 playerState = ""
                 playerView.animation = "walk"
-                playerView.scaleX = if (playerDirection.x < 0) -1f else +1f
+                playerView.scaleX = if (playerDirection.x < 0) -1.0 else +1.0
             }
-            val speed = 1.5f
-            val newDir = Vector2(dx.toFloat() * speed, dy.toFloat() * speed)
+            val speed = 1.5
+            val newDir = Vector2D(dx * speed, dy * speed)
             val oldPos = player.pos
             val moveRay = doRay(oldPos, newDir, "Collides")
             val finalDir = if (moveRay != null && moveRay.point.distanceTo(oldPos) < 6f) {
                 val res = newDir.reflected(moveRay.normal)
                 // @TODO: Improve sliding
-                if (moveRay.normal.y != 0f) {
-                    Vector2(res.x, 0f)
+                if (moveRay.normal.y != 0.0) {
+                    Vector2D(res.x, 0f)
                 } else {
-                    Vector2(0f, res.y)
+                    Vector2D(0f, res.y)
                 }
             } else {
                 newDir
@@ -822,53 +822,5 @@ open class ImageAnimationView2<T : SmoothedBmpSlice>(
     }
 }
 
-inline operator fun Vector2.rem(that: Vector2): Vector2 = Point(x % that.x, y % that.y)
-inline operator fun Vector2.rem(that: Size): Vector2 = Point(x % that.width, y % that.height)
-inline operator fun Vector2.rem(that: Float): Vector2 = Point(x % that, y % that)
-
 private var RayResult.view: View? by Extra.Property { null }
 private var RayResult.blockedResults: List<RayResult>? by Extra.Property { null }
-
-class BlurFilterEx(
-    radius: Float = 4f,
-    expandBorder: Boolean = true,
-    @ViewProperty
-    var optimize: Boolean = true
-) : ComposedFilter() {
-    private val horizontal = DirectionalBlurFilter(angle = 0.degrees, radius, expandBorder).also { filters.add(it) }
-    private val vertical = DirectionalBlurFilter(angle = 90.degrees, radius, expandBorder).also { filters.add(it) }
-    var filtering: Boolean
-        get() = horizontal.filtering
-        set(value) {
-            horizontal.filtering = value
-            vertical.filtering = value
-        }
-    @ViewProperty
-    var expandBorder: Boolean
-        get() = horizontal.expandBorder
-        set(value) {
-            horizontal.expandBorder = value
-            vertical.expandBorder = value
-        }
-    @ViewProperty
-    var radius: Float = radius
-        set(value) {
-            field = value
-            horizontal.radius = radius
-            vertical.radius = radius
-        }
-    override val recommendedFilterScale: Float get() = if (!optimize || radius <= 2.0) 1f else 1f / log2(radius.toFloat() * 0.5f)
-
-    override val isIdentity: Boolean get() = radius == 0f
-}
-
-private fun Vector2.reflected(surfaceNormal: Vector2): Vector2 {
-    val d = this
-    val n = surfaceNormal
-    return d - 2f * (d dot n) * n
-}
-
-// https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
-//𝑟=𝑑−2(𝑑⋅𝑛)𝑛
-private operator fun Float.times(v: Vector3): Vector3 = v * this
-private operator fun Float.times(v: Vector2): Vector2 = v * this
