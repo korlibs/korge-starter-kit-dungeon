@@ -9,6 +9,7 @@ import korlibs.image.font.*
 import korlibs.image.format.*
 import korlibs.image.tiles.*
 import korlibs.io.async.*
+import korlibs.io.async.launch
 import korlibs.korge.*
 import korlibs.korge.animate.*
 import korlibs.korge.input.*
@@ -33,6 +34,7 @@ import korlibs.memory.*
 import korlibs.time.*
 import kotlin.math.*
 import korlibs.render.*
+import kotlinx.coroutines.*
 
 suspend fun main() = Korge(windowSize = Size(1280, 720), backgroundColor = Colors["#2b2b2b"], displayMode = KorgeDisplayMode.TOP_LEFT_NO_CLIP) {
     val sceneContainer = sceneContainer()
@@ -113,7 +115,7 @@ class MyScene : Scene() {
         levelView.mask(highlight, filtering = false)
         highlight.visible = false
 
-        uiButton("Reload") { onClick { sceneContainer.changeTo { MyScene() } } }
+        uiButton("Reload") { onClick { launch { sceneContainer.changeTo { MyScene() } } } }
 
         val entitiesBvh = BvhWorld(camera)
         addUpdater {
@@ -208,6 +210,12 @@ class MyScene : Scene() {
             return v != 1 && v != 3
         }
 
+        fun TileMapData.check(it: PointInt): Boolean {
+            if (!this.inside(it.x, it.y)) return true
+            val v = this.get(it.x, it.y).tile
+            return v != 1 && v != 3 // 1=Ground, 3=Stone, ... 2=Wall, 4=Outside
+        }
+
         fun hitTest(pos: Point): Boolean {
             for (result in entitiesBvh.bvh.search(Rectangle.fromBounds(pos - Point(1, 1), pos + Point(1, 1)))) {
                 val view = result.value?.view ?: continue
@@ -230,6 +238,7 @@ class MyScene : Scene() {
             val ray = Ray(pos, dir)
             val outResults = arrayListOf<RayResult?>()
             val blockedResults = arrayListOf<RayResult>()
+            //println("grid=$grid")
             outResults += grid.raycast(ray, gridSize, collides = { check(it) })?.also { it.view = null }
             for (result in entitiesBvh.bvh.intersect(ray)) {
                 val view = result.obj.value?.view
@@ -722,10 +731,11 @@ open class ImageAnimationView2<T : SmoothedBmpSlice>(
                         image as TileMap
                         val tilemap = it.tilemap
                         if (tilemap == null) {
-                            image.stackedIntMap = StackedIntArray2(IntArray2(1, 1, 0))
+
+                            image.map = TileMapData(1, 1)
                             image.tileset = TileSet.EMPTY
                         } else {
-                            image.stackedIntMap = StackedIntArray2(tilemap.data)
+                            image.map = TileMapData(tilemap.data)
                             image.tileset = tilemap.tileSet ?: TileSet.EMPTY
                         }
                     }
@@ -824,3 +834,12 @@ open class ImageAnimationView2<T : SmoothedBmpSlice>(
 
 private var RayResult.view: View? by Extra.Property { null }
 private var RayResult.blockedResults: List<RayResult>? by Extra.Property { null }
+
+fun TileMapData.raycast(
+    ray: Ray,
+    cellSize: Size = Size(1, 1),
+    maxTiles: Int = 10,
+    collides: TileMapData.(tilePos: PointInt) -> Boolean
+): RayResult? {
+    return ray.firstCollisionInTileMap(cellSize, maxTiles) { pos -> collides(this, pos) }
+}
