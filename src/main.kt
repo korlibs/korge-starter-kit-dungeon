@@ -126,7 +126,7 @@ class MyScene : Scene() {
 
         val textInfo = text("", font = font).xy(120, 8)
         println(levelView.layerViewsByName.keys)
-        val grid = levelView.layerViewsByName["Kind"]!!.intGrid
+        val grid = levelView.layerViewsByName["Kind"]!!.intGridInt
         val entities = levelView.layerViewsByName["Entities"]!!.entities
 
         for (entity in entities) {
