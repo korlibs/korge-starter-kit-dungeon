@@ -7,6 +7,7 @@ import korlibs.image.bitmap.*
 import korlibs.image.color.*
 import korlibs.image.font.*
 import korlibs.image.format.*
+import korlibs.image.text.*
 import korlibs.image.tiles.*
 import korlibs.io.async.*
 import korlibs.io.async.launch
@@ -19,6 +20,7 @@ import korlibs.korge.scene.*
 import korlibs.korge.tween.*
 import korlibs.korge.ui.*
 import korlibs.korge.view.*
+import korlibs.korge.view.align.*
 import korlibs.korge.view.animation.*
 import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
@@ -74,6 +76,9 @@ class BvhEntity(val world: BvhWorld, val view: View) {
 class MyScene : Scene() {
     override suspend fun SContainer.sceneMain() {
         //val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld()
+
+        val loadingText = text("Loading level...", alignment = TextAlignment.MIDDLE_CENTER).centerOn(this)
+
         val atlas = MutableAtlasUnit()
 
         val font = KR.fonts.publicpixel.__file.readTtfFont().lazyBitmapSDF
@@ -506,6 +511,8 @@ class MyScene : Scene() {
             //        updated(right = it.new > 0f, up = true, scale = 1f)
             //    }
         }
+
+        loadingText.removeFromParent()
     }
 
     /*
